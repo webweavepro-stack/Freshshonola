@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   MessageSquare,
   Phone,
@@ -7,10 +7,83 @@ import {
   ShieldCheck,
   CheckCircle2,
   ArrowUpRight,
-  HelpCircle
+  HelpCircle,
+  Database,
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { EnquiryForm } from '../components/EnquiryForm';
 import { openWhatsApp, DISPLAY_PHONE_NUMBER, WHATSAPP_PHONE_NUMBER } from '../utils/whatsapp';
+import { testSupabaseConnection, isSupabaseConfigured } from '../lib/supabase';
+
+const SupabaseStatusCard: React.FC = () => {
+  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState<{
+    tested: boolean;
+    connected?: boolean;
+    tableReady?: boolean;
+    message?: string;
+  }>({ tested: false });
+
+  const handleTest = async () => {
+    setTesting(true);
+    const result = await testSupabaseConnection();
+    setStatus({
+      tested: true,
+      connected: result.connected,
+      tableReady: result.tableReady,
+      message: result.message
+    });
+    setTesting(false);
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-3 shadow-xs">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+            <Database className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="font-bold text-slate-900 text-xs">Supabase Database</h3>
+            <p className="text-[11px] text-slate-500">Connected: qbokzgdiaanzqerjmxyv</p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleTest}
+          disabled={testing}
+          className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition-colors cursor-pointer disabled:opacity-60"
+        >
+          <RefreshCw className={`w-3 h-3 ${testing ? 'animate-spin' : ''}`} />
+          <span>{testing ? 'Checking...' : 'Test Connection'}</span>
+        </button>
+      </div>
+
+      {status.tested ? (
+        <div
+          className={`p-3 rounded-lg text-xs leading-relaxed ${
+            status.connected
+              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+              : 'bg-red-50 text-red-900 border border-red-200'
+          }`}
+        >
+          <div className="flex items-start gap-1.5 font-medium">
+            {status.connected ? (
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+            ) : null}
+            <span>{status.message}</span>
+          </div>
+        </div>
+      ) : (
+        <p className="text-[11px] text-slate-500">
+          Enquiries from this website are saved to your Supabase project in real time. Click &quot;Test Connection&quot; to ping your database.
+        </p>
+      )}
+    </div>
+  );
+};
 
 export const ContactPage: React.FC = () => {
   return (
@@ -80,6 +153,9 @@ export const ContactPage: React.FC = () => {
               <span>Call {DISPLAY_PHONE_NUMBER}</span>
             </a>
           </div>
+
+          {/* Supabase Connection Status Card */}
+          <SupabaseStatusCard />
 
           {/* Operational Hours & Country */}
           <div className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4 shadow-xs text-xs text-slate-600">

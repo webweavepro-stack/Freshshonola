@@ -73,26 +73,66 @@ export async function logEnquiryToSupabase(payload: CustomerEnquiryPayload): Pro
 /**
  * Health check to verify connection to Supabase database.
  */
-export async function testSupabaseConnection(): Promise<{ ok: boolean; message: string }> {
+export async function testSupabaseConnection(): Promise<{
+  connected: boolean;
+  tableReady: boolean;
+  message: string;
+}> {
+  if (!isSupabaseConfigured) {
+    return {
+      connected: false,
+      tableReady: false,
+      message: 'Supabase credentials are not configured.'
+    };
+  }
+
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/services?select=count`, {
+    // 1. Verify API Key and Project connectivity
+    const rootRes = await fetch(`${SUPABASE_URL}/rest/v1/`, {
+      method: 'GET',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+      }
+    });
+
+    if (!rootRes.ok) {
+      return {
+        connected: false,
+        tableReady: false,
+        message: `Connection failed with status ${rootRes.status}. Check project URL & anon key.`
+      };
+    }
+
+    // 2. Check if customer_enquiries table is provisioned
+    const tableRes = await fetch(`${SUPABASE_URL}/rest/v1/customer_enquiries?select=count`, {
       method: 'HEAD',
       headers: {
         apikey: SUPABASE_ANON_KEY,
         Authorization: `Bearer ${SUPABASE_ANON_KEY}`
       }
     });
-    return {
-      ok: res.ok,
-      message: res.ok
-        ? 'Connected to Supabase successfully'
-        : `Supabase returned HTTP ${res.status}. If tables are not yet created, execute supabase/schema.sql.`
-    };
+
+    if (tableRes.ok) {
+      return {
+        connected: true,
+        tableReady: true,
+        message: 'Successfully connected to Supabase and customer_enquiries table is active!'
+      };
+    } else {
+      return {
+        connected: true,
+        tableReady: false,
+        message: 'Connected to Supabase project. Table "customer_enquiries" is pending creation (run supabase/schema.sql in SQL Editor).'
+      };
+    }
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown network failure';
+    const errorMsg = err instanceof Error ? err.message : 'Network error';
     return {
-      ok: false,
-      message
+      connected: false,
+      tableReady: false,
+      message: `Network error connecting to Supabase: ${errorMsg}`
     };
   }
 }
+

@@ -261,7 +261,7 @@ VALUES
 ON CONFLICT (key) DO NOTHING;
 
 -- ---------------------------------------------------------------------
--- 10. HELPER TRIGGERS FOR UPDATED_AT TIMESTAMP
+-- 10. HELPER TRIGGERS FOR UPDATED_AT TIMESTAMP (Non-destructive)
 -- ---------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$
@@ -271,12 +271,21 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS set_updated_at_services ON public.services;
-CREATE TRIGGER set_updated_at_services
-  BEFORE UPDATE ON public.services
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'set_updated_at_services'
+  ) THEN
+    CREATE TRIGGER set_updated_at_services
+      BEFORE UPDATE ON public.services
+      FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+  END IF;
 
-DROP TRIGGER IF EXISTS set_updated_at_enquiries ON public.customer_enquiries;
-CREATE TRIGGER set_updated_at_enquiries
-  BEFORE UPDATE ON public.customer_enquiries
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_trigger WHERE tgname = 'set_updated_at_enquiries'
+  ) THEN
+    CREATE TRIGGER set_updated_at_enquiries
+      BEFORE UPDATE ON public.customer_enquiries
+      FOR EACH ROW EXECUTE PROCEDURE public.handle_updated_at();
+  END IF;
+END $$;
