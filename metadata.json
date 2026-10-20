@@ -1,0 +1,6 @@
+{
+  "name": "Freshshonola Multiventures",
+  "description": "Essential business services in Nigeria: NIN support, computer & general printing, solar installation & maintenance, CAC registration, and Moniepoint POS agent solutions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
